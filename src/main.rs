@@ -13,7 +13,7 @@ struct User {
 }
 
 fn redis_to_postgres(redis_data: Vec<String>, postgres_conn: postgres::Connection) {
-    let conn = postgres_connection();
+    let conn = postgres_connection("postgres://postgres@localhost");
     for row in redis_data {
 
 		let user = User {
@@ -26,13 +26,13 @@ fn redis_to_postgres(redis_data: Vec<String>, postgres_conn: postgres::Connectio
     }
 }
 
-fn redis_client() -> redis::Client {
-    let client = redis::Client::open("redis://127.0.0.1/");
+fn redis_client(address: &str) -> redis::Client {
+    let client = redis::Client::open(address);
     client.unwrap()
 }
 
-fn postgres_connection() -> postgres::Connection {
-    let connection = Connection::connect("postgres://postgres@localhost", TlsMode::None).unwrap();
+fn postgres_connection(address: &str) -> postgres::Connection {
+    let connection = Connection::connect(address, TlsMode::None).unwrap();
     connection
 }
 
@@ -42,13 +42,13 @@ mod tests {
     use super::*;
 
     pub fn get_redis_data(key: &str) -> redis::RedisResult<(redis::Value)> {
-        let con = try!(redis_client().get_connection());
+        let con = try!(redis_client("redis://127.0.0.1/").get_connection());
         let result = con.lrange("users", 0, -1);
         result
     }
 
     pub fn create_redis_data() -> redis::RedisResult<()> {
-        let con = redis_client().get_connection().unwrap();
+        let con = redis_client("redis://127.0.0.1/").get_connection().unwrap();
 
         con.lpush("users", "Sylvanas")?;
         con.lpush("users", "Arthas")?;
@@ -57,20 +57,15 @@ mod tests {
     }
 
     pub fn redis_cleanup() -> redis::RedisResult<()> {
-        let con = redis_client().get_connection().unwrap();
+        let con = redis_client("redis://127.0.0.1/").get_connection().unwrap();
 
         con.del("users")?;
 
       Ok(())
     }
 
-    fn redis_client() -> redis::Client {
-        let client = redis::Client::open("redis://127.0.0.1/");
-        client.unwrap()
-    }
-
     fn create_postgres_schema() {
-				let conn = postgres_connection();
+				let conn = postgres_connection("postgres://postgres@localhost");
 				conn.execute("CREATE TABLE IF NOT EXISTS users (
                     id              SERIAL PRIMARY KEY,
                     name            VARCHAR NOT NULL
@@ -78,7 +73,7 @@ mod tests {
     }
 
     fn postgres_cleanup() {
-				let conn = postgres_connection();
+				let conn = postgres_connection("postgres://postgres@localhost");
 				conn.execute("DROP TABLE IF EXISTS users", &[]).unwrap();
     }
 
@@ -90,7 +85,7 @@ mod tests {
         create_redis_data();
         create_postgres_schema();
 
-        let postgres_conn = postgres_connection();
+        let postgres_conn = postgres_connection("postgres://postgres@localhost");
 
         let users_redis_data = get_redis_data("users").unwrap();
         let users_data = redis::from_redis_value::<Vec<String>>(&users_redis_data).unwrap();
@@ -99,7 +94,7 @@ mod tests {
 
         let mut postgres_users: Vec<User> = vec![];
 
-        let new_postgres_conn = postgres_connection();
+        let new_postgres_conn = postgres_connection("postgres://postgres@localhost");
         for row in &new_postgres_conn.query("SELECT * FROM users", &[]).unwrap() {
             let user = User {
                 name: row.get(1),
