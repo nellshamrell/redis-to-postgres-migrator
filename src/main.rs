@@ -5,11 +5,12 @@ use redis::Commands;
 extern crate postgres;
 use postgres::{Connection, TlsMode};
 
+#[cfg(not(test))]
 fn main() {
-//		let args: Vec<_> = env::args().collect();
-//    if args.len() > 1 {
-//        println!("The first argument is {}", args[1]);
-//    }
+		let args: Vec<_> = env::args().collect();
+println!("here be those args!");
+println!("{:?}", args);
+    redis_to_postgres(redis_client(&args[1]), postgres_connection(&args[2]));
 }
 
 struct User {
