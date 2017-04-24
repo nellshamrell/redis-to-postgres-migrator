@@ -9,7 +9,6 @@ fn main() {
 }
 
 struct User {
-    id: i32,
     name: String,
 }
 
@@ -18,7 +17,6 @@ fn redis_to_postgres(redis_data: Vec<String>, postgres_conn: postgres::Connectio
     for row in redis_data {
 
 		let user = User {
-        id: 0,
         name: row,
     };
 
@@ -85,22 +83,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    fn test_redis_connection() {
-        create_redis_data();
-        let redis_data = get_redis_data("users").unwrap();
-
-        let data_results = redis::from_redis_value::<Vec<String>>(&redis_data).unwrap();
-
-
-        assert_eq!(data_results[0], "Arthas");
-        assert_eq!(data_results[1], "Sylvanas");
-
-
-        redis_cleanup();
-    }
-
-    #[test]
     fn test_postgres() {
         redis_cleanup();
         postgres_cleanup();
@@ -120,15 +102,15 @@ mod tests {
         let new_postgres_conn = postgres_connection();
         for row in &new_postgres_conn.query("SELECT * FROM users", &[]).unwrap() {
             let user = User {
-                id: row.get(0),
                 name: row.get(1),
             };
             postgres_users.push(user);
         }
 
         assert_eq!(postgres_users.len(), 2);
+
         redis_cleanup();
- //       postgres_cleanup();
+        postgres_cleanup();
     }
 }
 
