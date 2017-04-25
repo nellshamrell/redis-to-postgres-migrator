@@ -7,9 +7,9 @@ use postgres::{Connection, TlsMode};
 
 #[cfg(not(test))]
 fn main() {
-		let args: Vec<_> = env::args().collect();
-println!("here be those args!");
-println!("{:?}", args);
+    let args: Vec<_> = env::args().collect();
+    println!("here be those args!");
+    println!("{:?}", args);
     redis_to_postgres(redis_client(&args[1]), postgres_connection(&args[2]));
 }
 
@@ -18,18 +18,17 @@ struct User {
 }
 
 fn redis_to_postgres(redis_conn: redis::Client, postgres_conn: postgres::Connection) {
-		let users_redis_data = get_redis_data(redis_conn, "users").unwrap();
-	  let users_data = redis::from_redis_value::<Vec<String>>(&users_redis_data).unwrap();
+    let users_redis_data = get_redis_data(redis_conn, "users").unwrap();
+    let users_data = redis::from_redis_value::<Vec<String>>(&users_redis_data).unwrap();
 
 
     for row in users_data {
 
-		let user = User {
-        name: row,
-    };
+        let user = User { name: row };
 
-		 postgres_conn.execute("INSERT INTO users (name) VALUES ($1)",
-										 &[&user.name]).unwrap();
+        postgres_conn
+            .execute("INSERT INTO users (name) VALUES ($1)", &[&user.name])
+            .unwrap();
 
     }
 }
@@ -45,8 +44,8 @@ fn postgres_connection(address: &str) -> postgres::Connection {
 }
 
 fn get_redis_data(redis_conn: redis::Client, key: &str) -> redis::RedisResult<(redis::Value)> {
-		let result = redis_conn.lrange(key, 0, -1);
-		result
+    let result = redis_conn.lrange(key, 0, -1);
+    result
 }
 
 #[cfg(test)]
@@ -54,33 +53,39 @@ mod tests {
     use super::*;
 
     pub fn create_redis_data() -> redis::RedisResult<()> {
-        let con = redis_client("redis://127.0.0.1/").get_connection().unwrap();
+        let con = redis_client("redis://127.0.0.1/")
+            .get_connection()
+            .unwrap();
 
         con.lpush("users", "Sylvanas")?;
         con.lpush("users", "Arthas")?;
 
-      Ok(())
+        Ok(())
     }
 
     pub fn redis_cleanup() -> redis::RedisResult<()> {
-        let con = redis_client("redis://127.0.0.1/").get_connection().unwrap();
+        let con = redis_client("redis://127.0.0.1/")
+            .get_connection()
+            .unwrap();
 
         con.del("users")?;
 
-      Ok(())
+        Ok(())
     }
 
     fn create_postgres_schema() {
-				let conn = postgres_connection("postgres://postgres@localhost");
-				conn.execute("CREATE TABLE IF NOT EXISTS users (
+        let conn = postgres_connection("postgres://postgres@localhost");
+        conn.execute("CREATE TABLE IF NOT EXISTS users (
                     id              SERIAL PRIMARY KEY,
                     name            VARCHAR NOT NULL
-                  )", &[]).unwrap();
+                  )",
+                     &[])
+            .unwrap();
     }
 
     fn postgres_cleanup() {
-				let conn = postgres_connection("postgres://postgres@localhost");
-				conn.execute("DROP TABLE IF EXISTS users", &[]).unwrap();
+        let conn = postgres_connection("postgres://postgres@localhost");
+        conn.execute("DROP TABLE IF EXISTS users", &[]).unwrap();
     }
 
     #[test]
@@ -99,10 +104,10 @@ mod tests {
         let mut postgres_users: Vec<User> = vec![];
 
         let new_postgres_conn = postgres_connection("postgres://postgres@localhost");
-        for row in &new_postgres_conn.query("SELECT * FROM users", &[]).unwrap() {
-            let user = User {
-                name: row.get(1),
-            };
+        for row in &new_postgres_conn
+                        .query("SELECT * FROM users", &[])
+                        .unwrap() {
+            let user = User { name: row.get(1) };
             postgres_users.push(user);
         }
 
@@ -112,4 +117,3 @@ mod tests {
         postgres_cleanup();
     }
 }
-
